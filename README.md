@@ -1,6 +1,6 @@
-# IOTAssesment
-IOT Final assesment
-Stephens Smart Doorbell – My IOT Assessment proposal  
+#  Stephens Smart Doorbell
+
+### Stephens Smart Doorbell – My IOT Assessment proposal  
 For this assessment I would like to make a smart doorbell similar to how the ring 
 doorbell works, but also with the use of rasbery pi. It detects motion then captures an 
 image. It will then provide the user with a dashboard of the image aptured 
