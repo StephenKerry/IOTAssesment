@@ -1,1 +1,73 @@
-yes
+#!/usr/bin/env python3
+import time
+import os
+import json
+import sys
+import BlynkLib
+import paho.mqtt.client as mqtt
+from datetime import datetime
+from picamera2 import Picamera2
+from upload_cloudinary import upload_image 
+
+BLYNK_AUTH = "tWW99U8X0wmq84OLPbmp7vF8KRT3Gzmm"
+MQTT_BROKER = "broker.hivemq.com"
+MQTT_TOPIC = "/stephenpi/event/doorbell" 
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOCAL_IMAGE = os.path.join(BASE_DIR, "last_visitor.jpg")
+
+print("Connecting to Blynk and MQTT...")
+blynk = BlynkLib.Blynk(BLYNK_AUTH, server='blynk.cloud')
+
+client = mqtt.Client()
+client.connect(MQTT_BROKER, 1883, 60)
+client.loop_start()
+
+print("Starting Camera...")
+picam2 = Picamera2()
+picam2.configure(picam2.create_still_configuration())
+picam2.start()
+
+@blynk.VIRTUAL_WRITE(1)
+def my_write_handler(value):
+    if int(value[0]) == 1:
+        print("\n[!] Doorbell Triggered!")
+        
+        try:
+            picam2.capture_file(LOCAL_IMAGE)
+            print("Photo captured.")
+
+            print("Uploading to Cloudinary...")
+            image_url = upload_image(LOCAL_IMAGE)
+            print(f"Cloud Link: {image_url}")
+
+            now = datetime.now()
+            payload = {
+                "image": image_url,
+                "ts": int(now.timestamp()),
+                "iso": now.isoformat(timespec="seconds")
+            }
+
+            client.publish(MQTT_TOPIC, json.dumps(payload))
+            print("MQTT message published.")
+
+            blynk.log_event("doorbell_pressed", f"New Visitor! View photo: {image_url}")
+            print("Blynk notification sent.")
+
+        except Exception as e:
+            print(f"Error in Cloud/MQTT flow: {e}")
+
+print("\n------------------------------------")
+print("READY: Press the Blynk Button to Sync")
+print("------------------------------------")
+
+try:
+    while True:
+        blynk.run()
+        time.sleep(0.1)
+except KeyboardInterrupt:
+    print("\nShutting down...")
+finally:
+    picam2.stop()
+    client.loop_stop()
+    client.disconnect()
