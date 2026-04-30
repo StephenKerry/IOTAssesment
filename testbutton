@@ -1,0 +1,13 @@
+from gpiozero import Button
+from time import sleep
+
+button = Button(6, pull_up=True, bounce_time=0.2)
+
+def pressed():
+    print("🔴 BUTTON DETECTED")
+
+button.when_pressed = pressed
+
+print("Waiting...")
+while True:
+    sleep(1)
