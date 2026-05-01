@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import time, json, sys, threading
+import time, json, sys
 import smtplib
 from email.message import EmailMessage
 import paho.mqtt.client as mqtt
@@ -7,96 +7,65 @@ from picamera2 import Picamera2
 from upload_cloudinary import upload_image
 from gpiozero import Button
 
-# ---------------- CONFIG ----------------
-# Email Settings
 SENDER_EMAIL = "stephenkerry2013@gmail.com"
-SENDER_PASSWORD = "susw hjmq mqqk ldnx" 
+SENDER_PASSWORD = "susw hjmq mqqk ldnx"
 RECEIVER_EMAIL = "stephenkerry2013@gmail.com"
 
-# MQTT Settings
 MQTT_TOPIC = "/stephenpi/event/doorbell"
 LOCAL_IMAGE = "last_visitor.jpg"
 keep_running = True
 
-# ---------------- INITIALIZATION ----------------
-
-# MQTT setup
 client = mqtt.Client()
 client.connect("broker.hivemq.com", 1883, 60)
 client.loop_start()
 
-# Camera setup
 picam2 = Picamera2()
 picam2.configure(picam2.create_still_configuration())
 picam2.start()
 
-# Hardware button on GPIO 6
 button = Button(6, pull_up=True, bounce_time=0.3)
-
-# ---------------- EMAIL FUNCTION ----------------
 
 def send_email_notification(image_url):
     try:
         msg = EmailMessage()
-        # This creates a clean, clickable link in your email
-        msg.set_content(f"🔔 Doorbell Alert!\n\nSomeone just pressed your doorbell.\n\nView the visitor photo here: {image_url}")
-        
-        msg['Subject'] = '📷 New Visitor at the Door!'
+        msg.set_content(f"Doorbell Alert!\n\nSomeone just pressed your doorbell.\n\nView the visitor photo here: {image_url}")
+        msg['Subject'] = 'Someone is at the Door!'
         msg['From'] = SENDER_EMAIL
         msg['To'] = RECEIVER_EMAIL
 
-        # Connect to Gmail's secure SMTP server
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
             smtp.send_message(msg)
-        print("📧 Email notification sent to stephenkerry2013@gmail.com!")
+        print("Email notification sent!")
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
-
-# ---------------- LOGIC ----------------
+        print(f"Error: {e}")
 
 def doorbell_process():
     global keep_running
     try:
-        print("📸 Button Pressed! Capturing photo...")
+        # Added message for GPIO 6 trigger
+        print("Button Pressed!")
+        
         picam2.capture_file(LOCAL_IMAGE)
-        
-        print("☁️ Uploading to Cloudinary...")
         url = upload_image(LOCAL_IMAGE)
-        
         if url:
-            # 1. Publish to MQTT (for your dashboard or other logs)
             client.publish(MQTT_TOPIC, json.dumps({"image": url, "ts": int(time.time())}))
-            
-            # 2. Send the Email
-            print("📫 Sending email alert...")
             send_email_notification(url)
-            
-            print("✅ Process complete. Script will now exit.")
-            keep_running = False 
-        
+            keep_running = False
     except Exception as e:
-        print(f"❌ Error during process: {e}")
+        print(f"Error: {e}")
         keep_running = False
 
-def handle_hardware_press():
-    print("\n🔴 DOORBELL TRIGGERED")
-    # Using a thread prevents the script from 'freezing' while the email sends
-    threading.Thread(target=doorbell_process).start()
-
-# Link the physical button to the process
-button.when_pressed = handle_hardware_press
-
-# ---------------- MAIN LOOP ----------------
-print("🚪 Doorbell System Active.")
+print("Doorbell System Active.")
 print("Listening for button press on GPIO 6...")
 
 try:
     while keep_running:
+        if button.is_pressed:
+            doorbell_process()
         time.sleep(0.1)
-
 finally:
-    print("🧹 Cleaning up resources...")
+    print("Cleaning up resources...")
     picam2.stop()
     client.loop_stop()
     client.disconnect()
