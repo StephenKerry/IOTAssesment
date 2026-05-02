@@ -17,3 +17,4 @@ A Python-based IoT doorbell for the Raspberry Pi. The system captures a photo wh
 
 * References: Followed https://randomnerdtutorials.com/raspberry-pi-send-email-python-smtp-server/ for STMP gmail code configuration
 * Used Week 5 Doorbell script from lab for camera configuration
+* Used ChatGPT To edit ReadMe to look nicer with italix text and formatting
