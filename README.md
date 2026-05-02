@@ -13,4 +13,7 @@ A Python-based IoT doorbell for the Raspberry Pi. The system captures a photo wh
 <h1>Hardware</h1>
 
 * Raspberry Pi (with Camera Module installed)  
-* Physical button connected to GPIO 6 and GND  
+* Physical button connected to GPIO 6 and GND
+
+* References: Followed https://randomnerdtutorials.com/raspberry-pi-send-email-python-smtp-server/ for STMP gmail code configuration
+* Used Week 5 Doorbell script from lab for camera configuration
